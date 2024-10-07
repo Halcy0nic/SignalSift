@@ -70,7 +70,7 @@ See `requirements.txt` for a full list of dependencies.
 
 If SignalSift is not properly loading your kismet file on Linux/MacOS, make sure your current user is the owner of the file.
 
-To change the ownership of files from root to your user account on Ubuntu, you can use the chown command with sudo privileges. Here's how to do it:
+To change the ownership of files from root to your user account on Linux/MacOS, you can use the chown command with sudo privileges. Here's how to do it:
 
 Open a terminal on your system. Use the following command to change ownership of the Kismet db:
 
@@ -95,6 +95,53 @@ Verify the change with:
 ```bash
 ls -l filename
 ```
+
+### File Size Limitations
+
+#### Default File Size Limit
+
+By default, uploaded files are limited to a size of 200MB. This limit may affect users attempting to upload larger Kismet database files.
+
+#### Configuring Maximum Upload Size
+
+You can increase this limit by configuring the `server.maxUploadSize` option. Streamlit provides several ways to set this configuration:
+
+*Note: a value of 400 is 400 MB in size*
+
+1. **Global Configuration File**:
+Create or edit a global config file at:
+- macOS/Linux: `~/.streamlit/config.toml`
+- Windows: `%userprofile%/.streamlit/config.toml`
+
+   Add the following lines:
+   ```toml
+   [server]
+   maxUploadSize = 400
+   ```
+
+2. Project-specific Configuration:
+   Create a config.toml file in a .streamlit folder in your SignalSift project directory:
+
+   ```
+   SignalSift/
+   ├── .streamlit/
+   │   └── config.toml
+   └── signalsift.py
+   ```
+
+   In config.toml, add:
+
+   ```toml
+   [server]
+   maxUploadSize = 400
+   ```
+
+3. Command Line:
+   When running your SignalSift, you can set the option via command line:
+
+   ```bash
+   streamlit run signalsift.py --server.maxUploadSize 400
+   ```
 
 ## Contributing
 
