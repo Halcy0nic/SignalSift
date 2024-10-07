@@ -64,6 +64,38 @@ SignalSift is a powerful Streamlit-based tool that automates the analysis and co
 
 See `requirements.txt` for a full list of dependencies.
 
+## Common Issues
+
+### File Uploading Issues
+
+If SignalSift is not properly loading your kismet file on Linux/MacOS, make sure your current user is the owner of the file.
+
+To change the ownership of files from root to your user account on Ubuntu, you can use the chown command with sudo privileges. Here's how to do it:
+
+Open a terminal on your system. Use the following command to change ownership of the Kismet db:
+
+```bash
+sudo chown your_username:your_username filename
+```
+
+Replace your_username with your actual username and filename with the path to the file you want to change ownership of. For example, if your username is "john" and you want to change ownership of a file called "example.kismet" in your home directory, you would use:
+
+```bash
+sudo chown john:john ~/example.kismet
+```
+
+For multiple files or directories, use:
+
+```bash
+sudo chown -R your_username:your_username /path/to/directory
+```
+
+Verify the change with:
+
+```bash
+ls -l filename
+```
+
 ## Contributing
 
 Contributions to SignalSift are welcome! Please feel free to submit a Pull Request.
