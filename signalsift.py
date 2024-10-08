@@ -19,22 +19,19 @@ def get_summary(conn):
     cursor.execute("SELECT MIN(ts_sec), MAX(ts_sec) FROM packets")
     start_time, end_time = cursor.fetchone()
     
-    cursor.execute("SELECT COUNT(*) FROM devices")
-    device_count = cursor.fetchone()[0]
-    
     cursor.execute("SELECT COUNT(*) FROM packets")
     packet_count = cursor.fetchone()[0]
     
     cursor.execute("SELECT COUNT(DISTINCT devmac) FROM devices")
-    unique_macs = cursor.fetchone()[0]
+    unique_devices = cursor.fetchone()[0]
     
     return {
         "Time Range": f"{datetime.datetime.fromtimestamp(start_time)} - {datetime.datetime.fromtimestamp(end_time)}",
         "Duration": f"{(end_time - start_time) / 3600:.2f} hours",
-        "Device Count": device_count,
-        "Packet Count": packet_count,
-        "Unique MACs": unique_macs
+        "Unique Devices": unique_devices,
+        "Packet Count": packet_count
     }
+
 
 def get_device_packet_counts(conn):
     cursor = conn.cursor()
