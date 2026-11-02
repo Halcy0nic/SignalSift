@@ -1,0 +1,97 @@
+name: Release
+
+# Publish Linux, Raspberry Pi and macOS binaries on the GitHub Releases page.
+# Usage: git tag v1.0.0 && git push origin v1.0.0
+# (or run manually from the Actions tab to build without publishing).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux amd64
+            slug: linux-amd64
+            goos: linux
+            goarch: amd64
+            goarm: ""
+          - name: Raspberry Pi 64-bit (arm64)
+            slug: linux-arm64
+            goos: linux
+            goarch: arm64
+            goarm: ""
+          - name: Raspberry Pi 32-bit (armv7)
+            slug: linux-armv7
+            goos: linux
+            goarch: arm
+            goarm: "7"
+          - name: Raspberry Pi Zero/1 (armv6)
+            slug: linux-armv6
+            goos: linux
+            goarch: arm
+            goarm: "6"
+          - name: macOS Intel (amd64)
+            slug: macos-amd64
+            goos: darwin
+            goarch: amd64
+            goarm: ""
+          - name: macOS Apple Silicon (arm64)
+            slug: macos-arm64
+            goos: darwin
+            goarch: arm64
+            goarm: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test
+        run: go vet ./... && go test -count=1 ./...
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: "0"
+        run: |
+          version="${GITHUB_REF_NAME:-dev}"
+          version="${version//\//-}"
+          mkdir -p dist
+          go build -trimpath -ldflags "-s -w -X main.version=${version}" \
+            -o "dist/signalsift-${version}-${{ matrix.slug }}" ./cmd/signalsift
+          ls -lh dist/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signalsift-${{ matrix.slug }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist && sha256sum signalsift-* > SHA256SUMS && cat SHA256SUMS
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: |
+            dist/signalsift-*
+            dist/SHA256SUMS
+          generate_release_notes: true

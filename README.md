@@ -35,15 +35,53 @@ It is built for network administrators, security professionals and technical sur
 
 ## Installation
 
-SignalSift needs [Go](https://go.dev/dl/) 1.27 or later to build. Once built, the binary has no dependencies. Kismet does not need to be installed, because SignalSift only reads the `.kismet` files it produces.
+SignalSift is a single binary with no dependencies. Kismet does not need to be installed, because SignalSift only reads the `.kismet` files it produces.
 
-**Install with Go:**
+### Download a binary
+
+Download the file for your system from the [releases page](https://github.com/Halcy0nic/SignalSift/releases/latest), along with `SHA256SUMS`.
+
+| System | File |
+| --- | --- |
+| Linux (64-bit Intel/AMD) | `signalsift-<version>-linux-amd64` |
+| Linux (64-bit ARM) and 64-bit Raspberry Pi | `signalsift-<version>-linux-arm64` |
+| 32-bit Raspberry Pi | `signalsift-<version>-linux-armv7` |
+| Raspberry Pi Zero and Pi 1 | `signalsift-<version>-linux-armv6` |
+| macOS (Apple Silicon) | `signalsift-<version>-macos-arm64` |
+| macOS (Intel) | `signalsift-<version>-macos-amd64` |
+
+Verify the download, then make it executable. These examples use v1.0.0 on 64-bit Linux, so replace the file name with yours.
+
+```bash
+sha256sum -c SHA256SUMS --ignore-missing
+chmod +x signalsift-v1.0.0-linux-amd64
+./signalsift-v1.0.0-linux-amd64 --version
+```
+
+To run it as `signalsift` from any directory, move it onto your `PATH`:
+
+```bash
+sudo mv signalsift-v1.0.0-linux-amd64 /usr/local/bin/signalsift
+```
+
+**On macOS**, use `shasum` to verify the download. The binaries are unsigned, so Gatekeeper blocks them until you clear the quarantine flag:
+
+```bash
+shasum -a 256 -c SHA256SUMS --ignore-missing
+chmod +x signalsift-v1.0.0-macos-arm64
+xattr -d com.apple.quarantine signalsift-v1.0.0-macos-arm64
+./signalsift-v1.0.0-macos-arm64 --version
+```
+
+### Install with Go
+
+This needs [Go](https://go.dev/dl/) 1.27 or later:
 
 ```bash
 go install github.com/Halcy0nic/SignalSift/cmd/signalsift@latest
 ```
 
-**Or build from source:**
+### Build from source
 
 ```bash
 git clone https://github.com/Halcy0nic/SignalSift.git
