@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SignalSift Report</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5d6773; --line: #dfe3e8;
+  --accent: #0b6e99; --new: #1a7f37; --missing: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101317; --panel: #181c21; --text: #e6e9ed; --muted: #98a2ae; --line: #2b3138;
+    --accent: #5fd7ff; --new: #5fd787; --missing: #ff875f;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 56px; }
+h1 { margin: 0; font-size: 28px; }
+h2 { margin: 36px 0 12px; font-size: 19px; }
+.meta { margin: 4px 0 0; color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 24px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.stat b { display: block; font-size: 26px; line-height: 1.2; }
+.stat span { color: var(--muted); font-size: 13px; }
+.stat.new b { color: var(--new); }
+.stat.missing b { color: var(--missing); }
+.scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+th { white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+th { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.mac { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: nowrap; }
+h2.new { color: var(--new); }
+h2.missing { color: var(--missing); }
+.none { margin: 0; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>SignalSift Report</h1>
+<p class="meta">{{base .Baseline.File}} compared to {{base .Followup.File}} · generated {{.Generated}}</p>
+
+<div class="stats">
+  <div class="stat new"><b>{{.NewTotal}}</b><span>New devices</span></div>
+  <div class="stat missing"><b>{{.MissingTotal}}</b><span>Missing devices</span></div>
+  <div class="stat"><b>{{.Baseline.UniqueDevices}}</b><span>Devices in baseline</span></div>
+  <div class="stat"><b>{{.Followup.UniqueDevices}}</b><span>Devices in follow-up</span></div>
+</div>
+
+<h2>Capture Summary</h2>
+<div class="scroll"><table>
+  <thead><tr><th></th><th>Baseline</th><th>Follow-up</th></tr></thead>
+  <tbody>
+    <tr><td>File</td><td>{{base .Baseline.File}}</td><td>{{base .Followup.File}}</td></tr>
+    <tr><td>Kismet version</td><td>{{.Baseline.KismetVersion}}</td><td>{{.Followup.KismetVersion}}</td></tr>
+    <tr><td>Start</td><td>{{time .Baseline.Start}}</td><td>{{time .Followup.Start}}</td></tr>
+    <tr><td>End</td><td>{{time .Baseline.End}}</td><td>{{time .Followup.End}}</td></tr>
+    <tr><td>Duration</td><td>{{duration .Baseline.DurationSeconds}}</td><td>{{duration .Followup.DurationSeconds}}</td></tr>
+    <tr><td>Unique devices</td><td>{{.Baseline.UniqueDevices}}</td><td>{{.Followup.UniqueDevices}}</td></tr>
+    <tr><td>Packets</td><td>{{.Baseline.PacketCount}}</td><td>{{.Followup.PacketCount}}</td></tr>
+  </tbody>
+</table></div>
+{{range .Lists}}
+<h2 class="{{.Kind}}">{{.Title}}</h2>
+{{- if .Devices}}
+<div class="scroll"><table>
+  <thead><tr><th>MAC</th><th>Name</th><th>PHY</th><th>Type</th><th>Manufacturer</th><th>Encryption</th><th class="num">Signal</th><th class="num">Packets</th></tr></thead>
+  <tbody>
+  {{- range .Devices}}
+    <tr><td class="mac">{{.MAC}}</td><td>{{dash .Name}}</td><td>{{.PHY}}</td><td>{{.Type}}</td><td>{{dash .Manufacturer}}</td><td>{{dash .Encryption}}</td><td class="num">{{dash (signal .)}}</td><td class="num">{{.Packets}}</td></tr>
+  {{- end}}
+  </tbody>
+</table></div>
+{{- else}}
+<p class="none">None</p>
+{{- end}}
+{{end}}
+</main>
+</body>
+</html>
