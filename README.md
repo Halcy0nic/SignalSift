@@ -136,7 +136,7 @@ kismet -c wlan0 --log-prefix captures/
 signalsift compare baseline.kismet captures/Kismet-*.kismet --top 5
 ```
 
-The wildcard must match exactly one file, because `compare` takes two captures. Compare captures from the same location, or nearly every device will show as new or missing.
+The wildcard must match exactly one file, because `compare` takes two captures. Compare captures from the same location, or nearly every device will show as new or missing. If Wi-Fi doesn't reconnect afterwards, see [Common issues](#wi-fi-doesnt-come-back-after-a-capture).
 
 ## Commands
 
@@ -344,6 +344,21 @@ The capture's `packets` table is empty, usually because Kismet stopped immediate
 ### Comparing a capture that is still running
 
 SignalSift detects Kismet's journal file and reads the capture through SQLite's normal locking, but the results only reflect what has been written so far. Stop Kismet first for a complete comparison.
+
+### A capture was interrupted
+
+If Kismet crashes mid-write, it can leave a `.kismet-journal` file beside the capture. SignalSift handles this by rolling back the unfinished write on a private temporary copy, so your original stays untouched. The temporary copy briefly needs as much free disk space as the capture, and the data from the unfinished write is not included.
+
+### Wi-Fi doesn't come back after a capture
+
+Kismet leaves the interface unmanaged when it exits, so NetworkManager won't reconnect it, and it can also leave a monitor interface behind. Replace `wlan0` with your interface:
+
+```bash
+sudo iw dev wlan0mon del
+sudo nmcli device set wlan0 managed yes
+```
+
+Reconnection can take several seconds. To stay online during a capture, plug in Ethernet first and confirm that `ip route get 1.1.1.1` shows your Ethernet interface.
 
 ## Development
 

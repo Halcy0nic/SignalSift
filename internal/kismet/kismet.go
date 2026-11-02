@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -17,7 +18,8 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/sync/errgroup"
-	_ "modernc.org/sqlite" // Registers the pure-Go "sqlite" driver.
+	"modernc.org/sqlite" // Also registers the pure-Go "sqlite" driver.
+	sqlite3 "modernc.org/sqlite/lib"
 )
 
 // Device is one row of the Kismet devices table. The same MAC can produce
@@ -71,6 +73,59 @@ func Load(ctx context.Context, path string) (*Capture, error) {
 	if err != nil {
 		return nil, err
 	}
+	capture, err := read(ctx, path, dsn)
+	if needsRollback(err) {
+		return readRecovered(ctx, path)
+	}
+	return capture, err
+}
+
+// needsRollback reports whether SQLite refused a read-only open because the
+// capture has an interrupted write that must be rolled back first.
+func needsRollback(err error) bool {
+	var sqliteErr *sqlite.Error
+	return errors.As(err, &sqliteErr) && sqliteErr.Code()&0xff == sqlite3.SQLITE_READONLY
+}
+
+// readRecovered handles a capture left mid-write, for example by a Kismet crash.
+// Rolling back modifies the database, so it happens on a private temporary copy
+// and the original is never written.
+func readRecovered(ctx context.Context, path string) (*Capture, error) {
+	dir, err := os.MkdirTemp("", "signalsift-")
+	if err != nil {
+		return nil, fmt.Errorf("recover %s: %w", path, err)
+	}
+	defer os.RemoveAll(dir)
+
+	recovered := filepath.Join(dir, "capture.kismet")
+	for _, suffix := range []string{"", "-journal"} {
+		if err := copyFile(path+suffix, recovered+suffix); err != nil {
+			return nil, fmt.Errorf("recover %s: %w", path, err)
+		}
+	}
+	return read(ctx, path, (&url.URL{Scheme: "file", Path: recovered}).String())
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
+}
+
+// read loads a capture through dsn, reporting it under its original path.
+func read(ctx context.Context, path, dsn string) (*Capture, error) {
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)

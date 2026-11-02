@@ -211,6 +211,71 @@ func TestLoadDoesNotTouchTheFile(t *testing.T) {
 	}
 }
 
+// TestLoadRecoversInterruptedWrite snapshots a database and its journal in the
+// middle of a transaction, which is what a crashed writer leaves on disk.
+func TestLoadRecoversInterruptedWrite(t *testing.T) {
+	live := filepath.Join(t.TempDir(), "live.kismet")
+	f := newFixture(t, live)
+	f.device("IEEE802.11", "AA:AA:AA:AA:AA:AA", -40, map[string]any{
+		"kismet.device.base.commonname": strings.Repeat("x", 200000),
+	})
+
+	ctx := context.Background()
+	conn, err := f.db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	for _, stmt := range []string{"PRAGMA cache_size=1", "BEGIN IMMEDIATE", "DELETE FROM devices"} {
+		if _, err := conn.ExecContext(ctx, stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, readOnly := range []bool{false, true} {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "crashed.kismet")
+		for _, suffix := range []string{"", "-journal"} {
+			data, err := os.ReadFile(live + suffix)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path+suffix, data, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		before, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if readOnly {
+			if err := os.Chmod(dir, 0o500); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { os.Chmod(dir, 0o700) })
+		}
+
+		c, err := Load(ctx, path)
+		if err != nil {
+			t.Fatalf("readOnly=%v: %v", readOnly, err)
+		}
+		if len(c.Devices) != 1 {
+			t.Errorf("readOnly=%v: got %d devices, want the rolled-back 1", readOnly, len(c.Devices))
+		}
+		if c.Summary.File != path {
+			t.Errorf("summary reports %q, want the original path", c.Summary.File)
+		}
+		after, _ := os.ReadFile(path)
+		if !bytes.Equal(before, after) {
+			t.Errorf("readOnly=%v: capture was modified", readOnly)
+		}
+	}
+
+	if _, err := conn.ExecContext(ctx, "ROLLBACK"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLoadUnusualPaths(t *testing.T) {
 	for _, name := range []string{"with space.kismet", "hash#1.kismet", "what?.kismet", "100%.kismet"} {
 		t.Run(name, func(t *testing.T) {
