@@ -184,6 +184,16 @@ func readSummary(ctx context.Context, db *sql.DB, s *Summary) error {
 	if err != nil {
 		return fmt.Errorf("read packets: %w", err)
 	}
+	// Bluetooth sources log devices but no packets, so a Bluetooth-only capture
+	// takes its time range from when its devices were seen.
+	if !start.Valid {
+		err = db.QueryRowContext(ctx, `
+			SELECT MIN(first_time), MAX(last_time) FROM devices
+			WHERE first_time > 0 AND last_time > 0`).Scan(&start, &end)
+		if err != nil {
+			return fmt.Errorf("read devices: %w", err)
+		}
+	}
 	if start.Valid && end.Valid {
 		first, last := time.Unix(start.Int64, 0), time.Unix(end.Int64, 0)
 		s.Start, s.End = &first, &last

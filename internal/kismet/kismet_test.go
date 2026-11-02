@@ -179,6 +179,31 @@ func TestEmptyCapture(t *testing.T) {
 	}
 }
 
+func TestTimeRangeFallsBackToDevicesWithoutPackets(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a.kismet")
+	f := newFixture(t, path)
+	f.device("Bluetooth", "AA:AA:AA:AA:AA:AA", 0, blob("Speaker", 4))
+	if _, err := f.db.Exec(`INSERT INTO devices VALUES (0, 0, 'key', 'Bluetooth', 'BB:BB:BB:BB:BB:BB', 0, 'BTLE', '{}')`); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := Load(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := c.Summary
+	if s.Start == nil || s.End == nil {
+		t.Fatalf("no time range: %+v", s)
+	}
+	if s.Start.Unix() != 100 || s.End.Unix() != 200 || s.DurationSeconds != 100 {
+		t.Errorf("range = %d-%d (%ds), want 100-200 (100s), ignoring unset times",
+			s.Start.Unix(), s.End.Unix(), s.DurationSeconds)
+	}
+	if s.PacketCount != 0 {
+		t.Errorf("PacketCount = %d, want the logged count of 0", s.PacketCount)
+	}
+}
+
 func TestLoadDoesNotTouchTheFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "a.kismet")

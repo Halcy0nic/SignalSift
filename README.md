@@ -279,6 +279,7 @@ SignalSift exits with `0` on success and `1` on any error. Differences between c
 | **Packets** | The higher of Kismet's own total for the device and the number of rows in the `packets` table for that MAC and PHY. Neither source is complete alone: Bluetooth devices have no rows in the `packets` table, and the device total can lag behind it. |
 | **Signal** | The strongest signal in dBm. Kismet stores `0` when it never measured one, so SignalSift shows `-` in tables and `null` in JSON. |
 | **Name** | Kismet's common name, which is the SSID for access points. It is blank when Kismet only knows the MAC. |
+| **Time range** | The first and last logged packets. A capture with no logged packets, such as a Bluetooth-only capture, uses the times its devices were first and last seen. |
 | **Sorting** | Busiest first, then by MAC and PHY, so identical inputs always give identical output. |
 
 The capture summary's packet count includes every logged packet, even those with no source device, so it is much higher than the sum of the device counts.
@@ -339,7 +340,9 @@ A common cause is copying captures to or from macOS, which leaves hidden `._capt
 
 ### A capture shows "no packets"
 
-The capture's `packets` table is empty, usually because Kismet stopped immediately or packet logging was turned off. SignalSift still compares its devices.
+The capture has no logged packets and no device times, usually because Kismet stopped before it saw anything.
+
+A Bluetooth-only capture won't show this, even though its `Packets` row reads `0`. Kismet logs no packet rows for Bluetooth, so that row stays at `0`, but the time range comes from the devices and each device still shows its own packet total.
 
 ### Comparing a capture that is still running
 
